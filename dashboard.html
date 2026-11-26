@@ -30,6 +30,11 @@ th{background:#EAF4EF;position:sticky;top:0}
 a{color:#0B6E4F;font-weight:600}
 #login{max-width:340px;margin:12vh auto;display:flex;flex-direction:column;gap:12px}
 .err{color:#B42318;font-size:13px}
+.pop{min-width:220px;font-size:13px}
+.pop dl{margin:6px 0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
+.pop dt{color:#4B5A52}.pop dd{margin:0;font-weight:600;word-break:break-word}
+.pop img{width:100%;border-radius:8px;margin-top:6px;display:block}
+.pop .ph{margin-top:6px;color:#4B5A52}
 [hidden]{display:none!important}
 @media(max-width:800px){.row{grid-template-columns:1fr}}
 </style>
@@ -88,8 +93,38 @@ function normalize(d) {
   Object.values(g).forEach(e => { e.nasabah = e.names.join(', ') || '-'; e.ket = e.ket || e.names.length + ' nasabah'; ev.push(e); });
   d.real.forEach(r => ev.push({ t: r['Timestamp'], tgl: r['Tanggal'], pic: r['Nama PIC'], crm: r['Kode CRM'], form: 'Realisasi',
     nasabah: r['Nama Nasabah'], ket: r['Jenis RWO'] + (r['Ket. Tidak Dikunjungi'] ? ' (' + r['Ket. Tidak Dikunjungi'] + ')' : '') + ' · ' + r['Waktu Submit'],
-    nom: Number(r['Nominal RWO']) || 0, lat: r['Lat'], lng: r['Long'], maps: r['Maps'], file: r['Link Foto'], rwo: true }));
+    nom: Number(r['Nominal RWO']) || 0, lat: r['Lat'], lng: r['Long'], maps: r['Maps'], file: r['Link Foto'], rwo: true,
+    det: [['Nasabah', r['Nama Nasabah']], ['Unit', r['Unit']], ['Kelompok', r['Kelompok Nasabah']],
+      ['Sisa OS', r['Sisa OS'] === '' ? '' : rp(r['Sisa OS'])], ['Keterangan Realisasi', r['Keterangan Realisasi']],
+      ['Rencana Tindakan', r['Rencana Tindakan']], ['Keterangan Kunjungan', r['Keterangan Kunjungan']],
+      ['Ket. Tidak Dikunjungi', r['Ket. Tidak Dikunjungi']], ['Jenis RWO', r['Jenis RWO']], ['Nominal RWO', rp(r['Nominal RWO'])],
+      ['Tindak Lanjut', r['Tindak Lanjut']], ['Waktu Submit', r['Waktu Submit']]] }));
   return ev.sort((a, b) => b.t.localeCompare(a.t));
+}
+
+const FOTO = {};
+async function loadFoto(e, ph) {
+  try {
+    if (!FOTO[e.file]) {
+      ph.textContent = 'Memuat foto...';
+      const j = await (await fetch(API + '?action=foto&pin=' + encodeURIComponent(pin) + '&url=' + encodeURIComponent(e.file))).json();
+      if (!j.ok) throw new Error(j.error);
+      FOTO[e.file] = j.data;
+    }
+    ph.replaceChildren(h('img', null, { src: FOTO[e.file], alt: 'Foto kunjungan ' + e.nasabah }));
+  } catch (err) { ph.textContent = 'Foto gagal dimuat: ' + err.message; }
+}
+function popup(e) {
+  const box = h('div', null, { className: 'pop' });
+  box.append(h('b', e.pic + ' · ' + e.form + ' · ' + e.t.slice(11, 16)));
+  if (!e.rwo) return { box };
+  const dl = h('dl');
+  e.det.filter(([, v]) => v !== '' && v != null).forEach(([k, v]) => dl.append(h('dt', k), h('dd', String(v))));
+  box.append(dl);
+  const ph = h('div', null, { className: 'ph' }); box.append(ph);
+  const ada = /^https:\/\//.test(e.file || '');
+  if (!ada) ph.textContent = 'Tidak ada foto.';
+  return { box, open: ada ? () => loadFoto(e, ph) : null };
 }
 
 async function load() {
@@ -123,8 +158,10 @@ function render() {
   if (!map) { map = L.map('map').setView([-6.2, 106.8], 10); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map); layer = L.layerGroup().addTo(map); }
   layer.clearLayers(); const pts = [];
   list.forEach(e => { if (isNaN(+e.lat) || e.lat === '') return; pts.push([+e.lat, +e.lng]);
-    L.circleMarker([+e.lat, +e.lng], { radius: 8, color: '#fff', weight: 2, fillOpacity: .95, fillColor: e.form === 'Plan Pagi' ? '#1D4ED8' : '#0B6E4F' })
-      .bindPopup(h('div', e.pic + ' · ' + e.form + ' · ' + e.t.slice(11, 16))).addTo(layer); });
+    const p = popup(e);
+    const m = L.circleMarker([+e.lat, +e.lng], { radius: 8, color: '#fff', weight: 2, fillOpacity: .95, fillColor: e.form === 'Plan Pagi' ? '#1D4ED8' : '#0B6E4F' })
+      .bindPopup(p.box, { maxWidth: 300, maxHeight: 380 }).addTo(layer);
+    if (p.open) m.on('popupopen', p.open); });
   if (pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 16 });
   setTimeout(() => map.invalidateSize(), 50);
 }
@@ -132,7 +169,7 @@ function render() {
 $('#login').onsubmit = async ev => { ev.preventDefault(); pin = $('#pin').value; $('#dt').value = todayStr(); if (await load()) sessionStorage.setItem('pin', pin); };
 ['dt', 'ff', 'q'].forEach(i => $('#' + i).addEventListener('input', render));
 $('#rf').onclick = load;
-setInterval(() => { if (!$('#app').hidden) load(); }, 60000);
+setInterval(() => { if (!$('#app').hidden && !(map && map.getPane('popupPane').childElementCount)) load(); }, 60000);
 if (pin) { $('#dt').value = todayStr(); load(); }
 </script>
 </body>
