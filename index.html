@@ -34,6 +34,15 @@ input:disabled,select:disabled{background:#EEF1EF}
 .box.err{border-color:#B42318}.box.warn{border-color:#B54708}
 .box p{margin:0;font-weight:700;font-size:17px;line-height:1.45}
 .box.err .b{background:#B42318}.box.warn .b{background:#B54708}
+.cw{position:relative;display:flex;flex-direction:column;gap:6px}
+.cw .lb{font-size:13px;font-weight:600}
+.cam-in{position:absolute;left:0;bottom:0;width:100%;height:1px;min-height:0;margin:0;padding:0;border:0;opacity:0;pointer-events:none}
+.pv{width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid #D5DDD8}
+.cm{position:fixed;inset:0;background:#000;z-index:10;display:flex;flex-direction:column}
+.cm video,.cm canvas{flex:1;min-height:0;width:100%;object-fit:contain;background:#000}
+.cb{display:flex;gap:8px;padding:14px;padding-bottom:max(14px,env(safe-area-inset-bottom));background:#000}
+.cbt{flex:1;min-height:48px;border-radius:12px;border:1px solid #fff;background:transparent;color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.cbt.p{background:#0B6E4F;border-color:#0B6E4F}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -83,6 +92,13 @@ input:disabled,select:disabled{background:#EEF1EF}
 
 <div class="md" id="md" hidden role="dialog" aria-modal="true" aria-labelledby="mt">
   <div class="box" id="bx"><p id="mt"></p><button type="button" class="b" id="mo">OK</button></div>
+</div>
+
+<div class="cm" id="cm" hidden role="dialog" aria-modal="true" aria-label="Kamera">
+  <video id="cv" autoplay playsinline muted></video>
+  <canvas id="cc" hidden></canvas>
+  <div class="cb" id="cLive"><button type="button" class="cbt" id="cx">Tutup</button><button type="button" class="cbt p" id="cs">Ambil Foto</button><button type="button" class="cbt" id="cf">Putar Kamera</button></div>
+  <div class="cb" id="cShot" hidden><button type="button" class="cbt" id="cr">Foto Ulang</button><button type="button" class="cbt p" id="cu">Gunakan Foto</button></div>
 </div>
 
 <script>
@@ -197,7 +213,7 @@ $('#ci1').onclick = e => checkIn(e.target, $('#fp'), 'PLAN TIDAK BISA DI SUBMIT,
 const TAIL = `<label>Nominal RWO (Rp)<input name="nominal" type="number" min="0" step="1" inputmode="numeric" required></label>
 <label>Jenis RWO<select name="jenis" required><option value="">Pilih</option><option>Cash In</option><option>Phase Out</option><option>Tidak dikunjungi</option><option>Tidak Bayar</option></select></label>
 <label data-tl>Tindak Lanjut<input name="tl" required></label>
-<label>Dokumentasi Kunjungan<input name="foto" type="file" accept="image/*" required></label>`;
+<div class="cw" data-cam><span class="lb">Dokumentasi Kunjungan</span><input name="foto" type="file" accept="image/*" class="cam-in" tabindex="-1" required><button type="button" class="a" data-cam-btn>📷 Ambil Foto</button><img class="pv" alt="Foto dokumentasi" hidden></div>`;
 $$('[data-tail]').forEach(t => {
   t.innerHTML = TAIL;
   const j = $('[name=jenis]', t), tl = $('[data-tl]', t);
@@ -254,6 +270,47 @@ $('#ci2').onclick = e => checkIn(e.target, $('#fr'), 'REALISASI KUNJUNGAN TIDAK 
     late ? dlg('Form Berhasil di Submit, jangan lupa memeriksa kembali seluruh Inputan hari ini ya, HATI - HATI JURNAL GANTUNG', 'warn')
          : dlg('Form Berhasil di Submit, Silahkan Lanjutkan Aktivitas Berikut nya, SEMOGA CEPAT PECAH TELOR 💪');
   });
+
+/* ===== KAMERA: Dokumentasi Kunjungan (hanya kamera, tanpa galeri) ===== */
+let camW = null, camStream = null, camFace = 'environment';
+const cv = $('#cv'), cc = $('#cc');
+function syncCam(w) {
+  const i = $('.cam-in', w), pv = $('.pv', w), f = i.files && i.files[0];
+  if (pv.dataset.u) { URL.revokeObjectURL(pv.dataset.u); delete pv.dataset.u; }
+  if (f) { pv.dataset.u = URL.createObjectURL(f); pv.src = pv.dataset.u; } else pv.removeAttribute('src');
+  pv.hidden = !f;
+  $('[data-cam-btn]', w).textContent = f ? '📷 Ambil Ulang Foto' : '📷 Ambil Foto';
+  i.setCustomValidity(f ? '' : 'Dokumentasi Kunjungan wajib diambil dengan kamera');
+}
+function camMode(live) { cv.hidden = !live; cc.hidden = live; $('#cLive').hidden = !live; $('#cShot').hidden = live; }
+function stopCam() { if (camStream) camStream.getTracks().forEach(t => t.stop()); camStream = null; cv.srcObject = null; }
+function closeCam() { stopCam(); $('#cm').hidden = true; camW = null; }
+async function startCam() {
+  stopCam();
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: camFace } }, audio: false });
+    cv.srcObject = camStream; cv.style.transform = camFace === 'user' ? 'scaleX(-1)' : '';
+  } catch (e) { closeCam(); dlg('Kamera tidak bisa dibuka. Izinkan akses kamera lalu coba lagi.', 'err'); }
+}
+function openCam(w) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return dlg('Kamera tidak tersedia di perangkat atau browser ini.', 'err');
+  camW = w; camFace = 'environment'; camMode(true); $('#cm').hidden = false; startCam();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-cam-btn]'); if (b) openCam(b.closest('[data-cam]')); });
+$('#cx').onclick = closeCam;
+$('#cf').onclick = () => { camFace = camFace === 'user' ? 'environment' : 'user'; startCam(); };
+$('#cs').onclick = () => {
+  if (!cv.videoWidth) return;
+  cc.width = cv.videoWidth; cc.height = cv.videoHeight; cc.getContext('2d').drawImage(cv, 0, 0); camMode(false);
+};
+$('#cr').onclick = () => camMode(true);
+$('#cu').onclick = () => cc.toBlob(b => {
+  if (!b) return dlg('Foto gagal diambil. Coba lagi.', 'err');
+  const dt = new DataTransfer(); dt.items.add(new File([b], 'kunjungan.jpg', { type: 'image/jpeg' }));
+  $('.cam-in', camW).files = dt.files; syncCam(camW); closeCam();
+}, 'image/jpeg', .92);
+$('#fr').addEventListener('reset', () => setTimeout(() => $$('#fr [data-cam]').forEach(syncCam), 0));
+$$('#fr [data-cam]').forEach(syncCam);
 
 /* mulai */
 card(); absen(); realSections(); route();
