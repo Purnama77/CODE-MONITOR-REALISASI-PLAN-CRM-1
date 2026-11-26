@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0B6E4F">
+<title>Form PIC</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#F3F6F4;color:#17211C;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:480px;margin:0 auto;padding:16px 16px 40px;display:flex;flex-direction:column;gap:14px}
+.h{background:#0B6E4F;color:#fff;border-radius:14px;padding:16px}.h b{display:block;font-size:20px}.h span{font-size:13px}
+nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+nav a{text-align:center;padding:11px;border-radius:10px;border:1px solid #B9C4BE;background:#fff;color:#0B6E4F;text-decoration:none;font-weight:700}
+nav a.on{background:#0B6E4F;color:#fff;border-color:#0B6E4F}
+form{display:flex;flex-direction:column;gap:14px}
+label{display:block;font-size:13px;font-weight:600}
+input,select{display:block;width:100%;margin-top:4px;border:1px solid #B9C4BE;background:#fff;border-radius:10px;padding:11px 12px;font:inherit;font-weight:400;color:#17211C;min-height:46px}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #7CC4A6;outline-offset:1px}
+input:disabled,select:disabled{background:#EEF1EF}
+.c,.sec{background:#fff;border:1px solid #D5DDD8;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.sec{border:0;background:none;padding:0}
+.c h3{margin:0;font-size:14px;color:#0B6E4F}.r{display:flex;justify-content:space-between;align-items:center}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.s{background:#EAF4EF;border-radius:10px;padding:10px;font-size:13px;line-height:1.6}
+.e{color:#B42318;font-size:12px;margin-top:4px}
+.b{background:#0B6E4F;color:#fff;border:0;border-radius:12px;padding:15px;font:700 16px inherit;width:100%;min-height:48px;cursor:pointer}
+.b:disabled{background:#9AA8A1;cursor:wait}
+.a{background:#fff;color:#0B6E4F;border:2px dashed #0B6E4F;border-radius:12px;padding:12px;font:700 15px inherit;width:100%;min-height:48px;cursor:pointer}
+.x{background:none;border:0;color:#B42318;font:600 13px inherit;padding:8px;cursor:pointer;min-height:36px}
+.md{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9}
+.md[hidden]{display:none}
+.box{background:#fff;border-radius:16px;padding:24px;max-width:380px;width:100%;display:flex;flex-direction:column;gap:16px;text-align:center;border:3px solid #0B6E4F}
+.box.err{border-color:#B42318}.box.warn{border-color:#B54708}
+.box p{margin:0;font-weight:700;font-size:17px;line-height:1.45}
+.box.err .b{background:#B42318}.box.warn .b{background:#B54708}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<div class="h"><b id="ttl"></b><span id="sub"></span></div>
+<nav aria-label="Pilih form"><a href="#plan" id="t1">Plan Pagi</a><a href="#realisasi" id="t2">Realisasi</a></nav>
+
+<!-- FORM 1: PLAN PAGI -->
+<form id="fp">
+  <label>Nama PIC<input name="pic" required autocomplete="name"></label>
+  <label>Kode CRM (angka saja)<input name="crm" inputmode="numeric" required data-crm><div class="e" hidden>Format penulisan Salah</div></label>
+  <label>Absensi Hari ini<select name="absensi" id="abs" required><option>Masuk Kerja</option><option>Sakit</option><option>Ijin</option><option>Cuti</option></select></label>
+  <div class="sec" id="absW" hidden>
+    <label>Keterangan tidak hadir<input name="ketAbsen" required></label>
+    <label><span id="bktL"></span><input name="bukti" type="file" accept="image/*" required></label>
+  </div>
+  <div class="sec" id="nasW">
+    <b>Plan Kunjungan (Data Nasabah)</b>
+    <div id="cards" class="sec"></div>
+    <button type="button" class="a" id="add">+ Tambah Nasabah</button>
+  </div>
+  <button type="button" class="b" id="ci1">Check In</button>
+</form>
+
+<!-- FORM 2: REALISASI -->
+<form id="fr" hidden>
+  <label>Nama PIC<input name="pic" required autocomplete="name"></label>
+  <label>Kode CRM (angka saja)<input name="crm" inputmode="numeric" required data-crm><div class="e" hidden>Format penulisan Salah</div></label>
+  <label>Nama Kelompok<select name="kelompokPic" id="kp" required></select></label>
+  <label id="kpW" hidden>Ketik Nama Kelompok<input name="kpLain" required></label>
+  <label>Keterangan Realisasi<select name="ketReal" id="kr" required><option value="">Pilih</option><option>Sesuai Plan Pagi</option><option>Diluar Plan Pagi</option></select></label>
+  <div class="sec" id="sA" hidden>
+    <label>Pilih Nama Nasabah<select name="pn" id="pn" required></select></label>
+    <div class="e" id="pm" hidden></div>
+    <div class="s" id="info" hidden></div>
+    <label>Keterangan Kunjungan<select name="kv" id="kv" required><option value="">Pilih</option><option>Dikunjungi</option><option>Tidak dikunjungi</option></select></label>
+    <label id="ktW" hidden>Keterangan tidak dikunjungi<input name="kt" required></label>
+    <div class="sec" data-tail></div>
+  </div>
+  <div class="sec" id="sB" hidden>
+    <label>Nama Nasabah<input name="nama" required></label>
+    <label>Kelompok<input name="kel" required></label>
+    <div class="sec" data-tail></div>
+  </div>
+  <button type="button" class="b" id="ci2">Check In</button>
+</form>
+</main>
+
+<div class="md" id="md" hidden role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="box" id="bx"><p id="mt"></p><button type="button" class="b" id="mo">OK</button></div>
+</div>
+
+<script>
+/* ====== PENGATURAN ====== */
+const API = 'https://script.google.com/macros/s/AKfycbz3jgrMEIazgH998ecNhrimsC9GLMSC4VCVC5jUy69Ji0T7cTA90lWyaOKviTsbdHadKA/exec';              // URL Web App dari Apps Script
+/* ======================== */
+
+const $ = s => document.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sec = (el, on) => { el.hidden = !on; $$('input,select,textarea', el).forEach(i => i.disabled = !on); };
+const jam = () => +new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Jakarta' }).format(new Date());
+const dlg = (msg, type = 'ok') => { $('#mt').textContent = msg; $('#bx').className = 'box ' + type; $('#md').hidden = false; $('#mo').focus(); };
+$('#mo').onclick = () => $('#md').hidden = true;
+
+/* kode CRM: hanya angka */
+$$('[data-crm]').forEach(i => i.addEventListener('input', () => {
+  const bad = i.value !== '' && !/^\d+$/.test(i.value);
+  i.nextElementSibling.hidden = !bad;
+  i.setCustomValidity(bad ? 'Format penulisan Salah' : '');
+}));
+
+/* navigasi */
+function route() {
+  const r = location.hash === '#realisasi';
+  $('#fp').hidden = r; $('#fr').hidden = !r;
+  $('#t1').classList.toggle('on', !r); $('#t2').classList.toggle('on', r);
+  $('#ttl').textContent = r ? 'Form Realisasi' : 'Form Plan Pagi';
+  $('#sub').textContent = r ? 'Isi hasil kunjungan hari ini' : 'Isi rencana kunjungan hari ini';
+  document.title = $('#ttl').textContent;
+}
+addEventListener('hashchange', route);
+
+/* foto -> JPEG terkompres */
+async function img(f) {
+  if (!f || !f.size) return null;
+  const b = await createImageBitmap(f), k = Math.min(1, 1280 / Math.max(b.width, b.height));
+  const c = document.createElement('canvas'); c.width = b.width * k; c.height = b.height * k;
+  c.getContext('2d').drawImage(b, 0, 0, c.width, c.height);
+  return { data: c.toDataURL('image/jpeg', .7) };
+}
+
+/* lokasi */
+const getLoc = () => new Promise((ok, no) => navigator.geolocation
+  ? navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy) }), no, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 })
+  : no({ code: 1 }));
+
+async function post(p) {
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(p) });
+  const j = await r.json(); if (!j.ok) throw new Error(j.error); return j;
+}
+
+/* alur Check In: validasi -> lokasi -> kirim */
+async function checkIn(btn, form, denyMsg, build, done) {
+  if (API.startsWith('PASTE')) return dlg('URL Web App belum diisi pada index.html', 'err');
+  if (!form.reportValidity()) return;
+  btn.disabled = true; btn.textContent = 'Memproses...';
+  try {
+    let loc;
+    try { loc = await getLoc(); }
+    catch (e) { return dlg(e.code === 1 ? denyMsg : 'Lokasi tidak terbaca. Aktifkan GPS lalu coba lagi.', 'err'); }
+    const p = await build(loc);
+    await post(p);
+    done();
+  } catch (e) { dlg('Gagal mengirim: ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = 'Check In'; }
+}
+
+/* ===== FORM PLAN PAGI ===== */
+function card() {
+  const d = document.createElement('div'); d.className = 'c';
+  d.innerHTML = `<div class="r"><h3></h3><button type="button" class="x">Hapus</button></div>
+  <label>Nama Nasabah<input data-k="nama" required></label>
+  <div class="g"><label>Unit<input data-k="unit" required></label><label>Kelompok<input data-k="kelompok" required></label></div>
+  <div class="g"><label>Sisa OS (Rp)<input data-k="os" type="number" min="0" step="1" inputmode="numeric" required></label>
+  <label>Rencana Tindakan<select data-k="tindakan" required><option value="">Pilih</option><option value="Cash In">a. Cash In</option><option value="Phase Out">b. Phase Out</option></select></label></div>
+  <label>Rencana Realisasi Nominal (Rp)<input data-k="nominal" type="number" min="0" step="1" inputmode="numeric" required></label>`;
+  d.querySelector('.x').onclick = () => { d.remove(); renum(); };
+  $('#cards').append(d); renum();
+}
+function renum() {
+  const cs = $$('#cards .c');
+  cs.forEach((c, i) => { c.querySelector('h3').textContent = 'Nasabah ' + (i + 1); c.querySelector('.x').hidden = cs.length < 2; });
+}
+$('#add').onclick = card;
+
+const BUKTI = { Sakit: 'Upload Bukti Surat Sakit', Cuti: 'Upload Bukti SS Pengajuan Cuti pada Aplikasi PNM Digi', Ijin: 'Upload Bukti SS Chat WA Permintaan Ijin kepada Pimpinan' };
+function absen() {
+  const m = $('#abs').value === 'Masuk Kerja';
+  sec($('#absW'), !m); sec($('#nasW'), m);
+  if (!m) $('#bktL').textContent = BUKTI[$('#abs').value];
+}
+$('#abs').onchange = absen;
+
+$('#ci1').onclick = e => checkIn(e.target, $('#fp'), 'PLAN TIDAK BISA DI SUBMIT, MOHON IJINKAN AKSES LOKASI',
+  async loc => {
+    const v = Object.fromEntries(new FormData($('#fp')));
+    const m = v.absensi === 'Masuk Kerja';
+    return {
+      type: 'plan', pic: v.pic.trim(), crm: v.crm, absensi: v.absensi, ketAbsen: m ? '' : v.ketAbsen.trim(),
+      bukti: m ? null : await img(v.bukti),
+      nasabah: m ? $$('#cards .c').map(c => Object.fromEntries($$('[data-k]', c).map(i => [i.dataset.k, i.value.trim()]))) : [],
+      loc
+    };
+  },
+  () => {
+    const pic = $('#fp [name=pic]').value, crm = $('#fp [name=crm]').value;
+    $('#fp').reset(); $('#cards').innerHTML = ''; card(); absen();
+    $('#fp [name=pic]').value = pic; $('#fp [name=crm]').value = crm;
+    dlg('Plan Pagi berhasil di submit. Semangat bertugas hari ini! 💪');
+  });
+
+/* ===== FORM REALISASI ===== */
+const TAIL = `<label>Nominal RWO (Rp)<input name="nominal" type="number" min="0" step="1" inputmode="numeric" required></label>
+<label>Jenis RWO<select name="jenis" required><option value="">Pilih</option><option>Cash In</option><option>Phase Out</option><option>Tidak dikunjungi</option><option>Tidak Bayar</option></select></label>
+<label data-tl>Tindak Lanjut<input name="tl" required></label>
+<label>Dokumentasi Kunjungan<input name="foto" type="file" accept="image/*" required></label>`;
+$$('[data-tail]').forEach(t => {
+  t.innerHTML = TAIL;
+  const j = $('[name=jenis]', t), tl = $('[data-tl]', t);
+  j.onchange = () => sec(tl, j.value !== 'Phase Out');
+});
+function fillKp() {
+  const kp = $('#kp'), cur = kp.value;
+  kp.replaceChildren(new Option('Pilih', ''));
+  [...new Set(PLAN.map(p => p.kelompok).filter(Boolean))].forEach(k => kp.append(new Option(k, k)));
+  kp.append(new Option('Lainnya (ketik sendiri)', '__lain'));
+  if ([...kp.options].some(o => o.value === cur)) kp.value = cur;
+  sec($('#kpW'), kp.value === '__lain');
+}
+$('#kp').onchange = () => sec($('#kpW'), $('#kp').value === '__lain');
+
+var PLAN = [];
+function realSections() {
+  const v = $('#kr').value;
+  sec($('#sA'), v === 'Sesuai Plan Pagi'); sec($('#sB'), v === 'Diluar Plan Pagi');
+  $$('#fr [data-tl]').forEach(t => { const j = $('[name=jenis]', t.parentElement); if (!t.closest('#sA,#sB').hidden) sec(t, j.value !== 'Phase Out'); });
+  sec($('#ktW'), v === 'Sesuai Plan Pagi' && $('#kv').value === 'Tidak dikunjungi');
+  sec($('#kpW'), $('#kp').value === '__lain');
+  $('#pm').hidden = true; $('#info').hidden = true;
+  if (v === 'Sesuai Plan Pagi') loadPlan();
+}
+async function loadPlan() {
+  const crm = $('#fr [name=crm]').value, pn = $('#pn'), pm = $('#pm');
+  pn.innerHTML = '<option value="">Pilih</option>'; PLAN = []; $('#info').hidden = true; fillKp();
+  if (!/^\d+$/.test(crm) || API.startsWith('PASTE')) { pm.hidden = false; pm.textContent = 'Isi Kode CRM dengan benar untuk memuat Plan Pagi.'; return; }
+  pm.hidden = false; pm.style.color = '#4B5A52'; pm.textContent = 'Memuat Plan Pagi...';
+  try {
+    const j = await (await fetch(API + '?action=plan&crm=' + encodeURIComponent(crm))).json();
+    if (crm !== $('#fr [name=crm]').value) return;
+    PLAN = j.plan || []; fillKp();
+    PLAN.forEach((p, i) => { const o = document.createElement('option'); o.value = i; o.textContent = p.nama; pn.append(o); });
+    pm.style.color = '#B42318';
+    if (PLAN.length) pm.hidden = true; else pm.textContent = 'Plan Pagi hari ini untuk Kode CRM ini tidak ditemukan.';
+  } catch (e) { pm.style.color = '#B42318'; pm.textContent = 'Gagal memuat Plan Pagi. Coba lagi.'; }
+}
+$('#kr').onchange = realSections;
+$('#fr [name=crm]').addEventListener('change', loadPlan);
+$('#kv').onchange = () => sec($('#ktW'), $('#kv').value === 'Tidak dikunjungi');
+$('#pn').onchange = () => {
+  const p = PLAN[$('#pn').value], i = $('#info'); i.hidden = !p; if (!p) return;
+  i.replaceChildren(...[`Unit: ${p.unit}`, `Kelompok: ${p.kelompok}`, `Sisa OS: Rp ${Number(p.os).toLocaleString('id-ID')}`,
+    `Rencana: ${p.tindakan}, Rp ${Number(p.nominal).toLocaleString('id-ID')}`].flatMap((t, k) => [k ? document.createElement('br') : '', t]));
+};
+
+$('#ci2').onclick = e => checkIn(e.target, $('#fr'), 'REALISASI KUNJUNGAN TIDAK BISA DI SUBMIT, MOHON IJINKAN AKSES LOKASI',
+  async loc => {
+    const v = Object.fromEntries(new FormData($('#fr')));
+    const sesuai = v.ketReal === 'Sesuai Plan Pagi', pl = sesuai ? PLAN[v.pn] : {};
+    return {
+      type: 'realisasi', pic: v.pic.trim(), crm: v.crm, kelompokPic: v.kelompokPic === '__lain' ? v.kpLain.trim() : v.kelompokPic, ketReal: v.ketReal,
+      nasabah: sesuai ? pl.nama : v.nama.trim(), unit: pl.unit || '', kelompok: sesuai ? pl.kelompok : v.kel.trim(),
+      os: pl.os ?? '', rencana: pl.tindakan || '', ketKunjungan: v.kv || '', ketTidak: v.kt || '',
+      nominal: v.nominal, jenis: v.jenis, tl: v.jenis === 'Phase Out' ? '' : (v.tl || '').trim(),
+      foto: await img(v.foto), waktu: jam() < 18 ? 'Sebelum 18:00' : 'Setelah 18:00', loc
+    };
+  },
+  () => {
+    const late = jam() >= 18, pic = $('#fr [name=pic]').value, crm = $('#fr [name=crm]').value;
+    $('#fr').reset(); $('#fr [name=pic]').value = pic; $('#fr [name=crm]').value = crm;
+    realSections();
+    late ? dlg('Form Berhasil di Submit, jangan lupa memeriksa kembali seluruh Inputan hari ini ya, HATI - HATI JURNAL GANTUNG', 'warn')
+         : dlg('Form Berhasil di Submit, Silahkan Lanjutkan Aktivitas Berikut nya, SEMOGA CEPAT PECAH TELOR 💪');
+  });
+
+/* mulai */
+fillKp(); card(); absen(); realSections(); route();
+</script>
+</body>
+</html>

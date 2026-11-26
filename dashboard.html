@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Monitoring PIC</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#F3F6F4;color:#17211C;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:1280px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+h1{margin:0;font-size:22px}
+.tools{display:flex;flex-wrap:wrap;gap:8px}
+input,select,button{font:inherit;border:1px solid #B9C4BE;border-radius:10px;padding:9px 12px;background:#fff;min-height:42px}
+button{background:#0B6E4F;color:#fff;border-color:#0B6E4F;font-weight:700;cursor:pointer}
+:focus-visible{outline:3px solid #7CC4A6;outline-offset:1px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.card{background:#fff;border:1px solid #D5DDD8;border-radius:14px;padding:14px}
+.card span{display:block;font-size:13px;color:#4B5A52}.card b{font-size:26px}
+.row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+#map{height:340px;border-radius:10px;margin-top:8px}
+.bars{display:flex;align-items:flex-end;gap:6px;height:300px;margin-top:8px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:12px;gap:4px}
+.bar i{display:block;width:70%;background:#0B6E4F;border-radius:4px 4px 0 0;min-height:2px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+th,td{padding:9px 8px;border-bottom:1px solid #E3E9E5;text-align:left;vertical-align:top}
+th{background:#EAF4EF;position:sticky;top:0}
+a{color:#0B6E4F;font-weight:600}
+#login{max-width:340px;margin:12vh auto;display:flex;flex-direction:column;gap:12px}
+.err{color:#B42318;font-size:13px}
+[hidden]{display:none!important}
+@media(max-width:800px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<form id="login" class="card">
+  <h1>Dashboard Monitoring</h1>
+  <label>PIN Admin<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required style="width:100%;margin-top:4px"></label>
+  <div class="err" id="lerr" hidden></div>
+  <button>Masuk</button>
+</form>
+
+<main id="app" hidden>
+  <div class="top">
+    <div><h1>Dashboard Monitoring PIC</h1><span id="upd" style="font-size:13px;color:#4B5A52"></span></div>
+    <div class="tools">
+      <input type="date" id="dt" aria-label="Tanggal">
+      <select id="ff" aria-label="Jenis form"><option value="">Semua form</option><option>Plan Pagi</option><option>Realisasi</option></select>
+      <input type="search" id="q" placeholder="Cari PIC / nasabah" aria-label="Cari">
+      <button id="rf" type="button">Muat ulang</button>
+    </div>
+  </div>
+  <div class="kpi" id="kpi"></div>
+  <div class="row">
+    <div class="card"><b>Peta lokasi check-in</b><div id="map"></div></div>
+    <div class="card"><b>Check-in 7 hari terakhir</b><div class="bars" id="bars"></div></div>
+  </div>
+  <div class="card"><b>Rekap check-in</b>
+    <div class="scroll"><table><thead><tr><th>Waktu</th><th>PIC</th><th>Kode CRM</th><th>Form</th><th>Nasabah</th><th>Keterangan</th><th>Nominal</th><th>Lokasi</th><th>Foto/Bukti</th></tr></thead><tbody id="tb"></tbody></table></div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbz3jgrMEIazgH998ecNhrimsC9GLMSC4VCVC5jUy69Ji0T7cTA90lWyaOKviTsbdHadKA/exec';   // URL Web App yang sama dengan index.html
+const $ = s => document.querySelector(s);
+const rp = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+const todayStr = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Jakarta' }).format(new Date());
+let EV = [], map, layer, pin = sessionStorage.getItem('pin') || '';
+
+function h(tag, text, attrs) {
+  const e = document.createElement(tag); if (text != null) e.textContent = text;
+  Object.assign(e, attrs || {}); return e;
+}
+const link = (url, label) => /^https:\/\//.test(url || '') ? h('a', label, { href: url, target: '_blank', rel: 'noopener' }) : document.createTextNode('-');
+
+function normalize(d) {
+  const ev = [], g = {};
+  d.plan.forEach(r => {
+    const k = r['Timestamp'] + '|' + r['Nama PIC'];
+    const e = g[k] || (g[k] = { t: r['Timestamp'], tgl: r['Tanggal'], pic: r['Nama PIC'], crm: r['Kode CRM'], form: 'Plan Pagi', names: [], nom: 0,
+      ket: r['Absensi'] === 'Masuk Kerja' ? '' : r['Absensi'] + (r['Keterangan Tidak Hadir'] ? ': ' + r['Keterangan Tidak Hadir'] : ''),
+      absen: r['Absensi'] !== 'Masuk Kerja', lat: r['Lat'], lng: r['Long'], maps: r['Maps'], file: r['Link Bukti'] });
+    if (r['Nama Nasabah']) { e.names.push(r['Nama Nasabah']); e.nom += Number(r['Rencana Nominal']) || 0; }
+  });
+  Object.values(g).forEach(e => { e.nasabah = e.names.join(', ') || '-'; e.ket = e.ket || e.names.length + ' nasabah'; ev.push(e); });
+  d.real.forEach(r => ev.push({ t: r['Timestamp'], tgl: r['Tanggal'], pic: r['Nama PIC'], crm: r['Kode CRM'], form: 'Realisasi',
+    nasabah: r['Nama Nasabah'], ket: r['Jenis RWO'] + (r['Ket. Tidak Dikunjungi'] ? ' (' + r['Ket. Tidak Dikunjungi'] + ')' : '') + ' · ' + r['Waktu Submit'],
+    nom: Number(r['Nominal RWO']) || 0, lat: r['Lat'], lng: r['Long'], maps: r['Maps'], file: r['Link Foto'], rwo: true }));
+  return ev.sort((a, b) => b.t.localeCompare(a.t));
+}
+
+async function load() {
+  try {
+    const j = await (await fetch(API + '?action=dash&days=7&pin=' + encodeURIComponent(pin))).json();
+    if (!j.ok) throw new Error(j.error);
+    EV = normalize(j); $('#login').hidden = true; $('#app').hidden = false;
+    $('#upd').textContent = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID'); render(); return true;
+  } catch (e) { $('#lerr').hidden = false; $('#lerr').textContent = e.message; return false; }
+}
+
+function render() {
+  const d = $('#dt').value, f = $('#ff').value, q = $('#q').value.toLowerCase();
+  const day = EV.filter(e => e.tgl === d);
+  const list = day.filter(e => (!f || e.form === f) && (!q || (e.pic + ' ' + e.nasabah).toLowerCase().includes(q)));
+  const k = [['Check-in', day.length], ['PIC aktif', new Set(day.map(e => e.crm)).size], ['Plan masuk', day.filter(e => e.form === 'Plan Pagi').length],
+    ['Realisasi masuk', day.filter(e => e.form === 'Realisasi').length], ['Tidak masuk kerja', day.filter(e => e.absen).length],
+    ['Total nominal RWO', rp(day.filter(e => e.rwo).reduce((s, e) => s + e.nom, 0))], ['Check-in terakhir', day.length ? day[0].t.slice(11, 16) : '-']];
+  $('#kpi').replaceChildren(...k.map(([l, v]) => { const c = h('div', null, { className: 'card' }); c.append(h('span', l), h('b', v)); return c; }));
+
+  const days = [...Array(7)].map((_, i) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Jakarta' }).format(new Date(Date.now() - (6 - i) * 864e5)));
+  const cnt = days.map(x => EV.filter(e => e.tgl === x).length), mx = Math.max(1, ...cnt);
+  $('#bars').replaceChildren(...days.map((x, i) => { const b = h('div', null, { className: 'bar' }), s = h('i'); s.style.height = (cnt[i] / mx * 85) + '%'; b.append(h('span', cnt[i]), s, h('span', x.slice(5))); return b; }));
+
+  $('#tb').replaceChildren(...(list.length ? list.map(e => {
+    const tr = h('tr'), td = (...n) => { const c = h('td'); c.append(...n); tr.append(c); };
+    td(e.t.slice(11, 16)); td(e.pic); td(e.crm); td(e.form); td(e.nasabah); td(e.ket); td(e.nom ? rp(e.nom) : '-');
+    td(link(e.maps, 'Peta')); td(link(e.file, 'Buka')); return tr;
+  }) : [(() => { const tr = h('tr'), c = h('td', 'Belum ada data untuk filter ini.'); c.colSpan = 9; tr.append(c); return tr; })()]));
+
+  if (!map) { map = L.map('map').setView([-6.2, 106.8], 10); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map); layer = L.layerGroup().addTo(map); }
+  layer.clearLayers(); const pts = [];
+  list.forEach(e => { if (isNaN(+e.lat) || e.lat === '') return; pts.push([+e.lat, +e.lng]);
+    L.circleMarker([+e.lat, +e.lng], { radius: 8, color: '#fff', weight: 2, fillOpacity: .95, fillColor: e.form === 'Plan Pagi' ? '#1D4ED8' : '#0B6E4F' })
+      .bindPopup(h('div', e.pic + ' · ' + e.form + ' · ' + e.t.slice(11, 16))).addTo(layer); });
+  if (pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 16 });
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+$('#login').onsubmit = async ev => { ev.preventDefault(); pin = $('#pin').value; $('#dt').value = todayStr(); if (await load()) sessionStorage.setItem('pin', pin); };
+['dt', 'ff', 'q'].forEach(i => $('#' + i).addEventListener('input', render));
+$('#rf').onclick = load;
+setInterval(() => { if (!$('#app').hidden) load(); }, 60000);
+if (pin) { $('#dt').value = todayStr(); load(); }
+</script>
+</body>
+</html>
