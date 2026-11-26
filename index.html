@@ -63,8 +63,6 @@ input:disabled,select:disabled{background:#EEF1EF}
 <form id="fr" hidden>
   <label>Nama PIC<input name="pic" required autocomplete="name"></label>
   <label>Kode CRM (angka saja)<input name="crm" inputmode="numeric" required data-crm><div class="e" hidden>Format penulisan Salah</div></label>
-  <label>Nama Kelompok<select name="kelompokPic" id="kp" required></select></label>
-  <label id="kpW" hidden>Ketik Nama Kelompok<input name="kpLain" required></label>
   <label>Keterangan Realisasi<select name="ketReal" id="kr" required><option value="">Pilih</option><option>Sesuai Plan Pagi</option><option>Diluar Plan Pagi</option></select></label>
   <div class="sec" id="sA" hidden>
     <label>Pilih Nama Nasabah<select name="pn" id="pn" required></select></label>
@@ -205,35 +203,24 @@ $$('[data-tail]').forEach(t => {
   const j = $('[name=jenis]', t), tl = $('[data-tl]', t);
   j.onchange = () => sec(tl, j.value !== 'Phase Out');
 });
-function fillKp() {
-  const kp = $('#kp'), cur = kp.value;
-  kp.replaceChildren(new Option('Pilih', ''));
-  [...new Set(PLAN.map(p => p.kelompok).filter(Boolean))].forEach(k => kp.append(new Option(k, k)));
-  kp.append(new Option('Lainnya (ketik sendiri)', '__lain'));
-  if ([...kp.options].some(o => o.value === cur)) kp.value = cur;
-  sec($('#kpW'), kp.value === '__lain');
-}
-$('#kp').onchange = () => sec($('#kpW'), $('#kp').value === '__lain');
-
 var PLAN = [];
 function realSections() {
   const v = $('#kr').value;
   sec($('#sA'), v === 'Sesuai Plan Pagi'); sec($('#sB'), v === 'Diluar Plan Pagi');
   $$('#fr [data-tl]').forEach(t => { const j = $('[name=jenis]', t.parentElement); if (!t.closest('#sA,#sB').hidden) sec(t, j.value !== 'Phase Out'); });
   sec($('#ktW'), v === 'Sesuai Plan Pagi' && $('#kv').value === 'Tidak dikunjungi');
-  sec($('#kpW'), $('#kp').value === '__lain');
   $('#pm').hidden = true; $('#info').hidden = true;
   if (v === 'Sesuai Plan Pagi') loadPlan();
 }
 async function loadPlan() {
   const crm = $('#fr [name=crm]').value, pn = $('#pn'), pm = $('#pm');
-  pn.innerHTML = '<option value="">Pilih</option>'; PLAN = []; $('#info').hidden = true; fillKp();
+  pn.innerHTML = '<option value="">Pilih</option>'; PLAN = []; $('#info').hidden = true;
   if (!/^\d+$/.test(crm) || API.startsWith('PASTE')) { pm.hidden = false; pm.textContent = 'Isi Kode CRM dengan benar untuk memuat Plan Pagi.'; return; }
   pm.hidden = false; pm.style.color = '#4B5A52'; pm.textContent = 'Memuat Plan Pagi...';
   try {
     const j = await (await fetch(API + '?action=plan&crm=' + encodeURIComponent(crm))).json();
     if (crm !== $('#fr [name=crm]').value) return;
-    PLAN = j.plan || []; fillKp();
+    PLAN = j.plan || [];
     PLAN.forEach((p, i) => { const o = document.createElement('option'); o.value = i; o.textContent = p.nama; pn.append(o); });
     pm.style.color = '#B42318';
     if (PLAN.length) pm.hidden = true; else pm.textContent = 'Plan Pagi hari ini untuk Kode CRM ini tidak ditemukan.';
@@ -253,7 +240,7 @@ $('#ci2').onclick = e => checkIn(e.target, $('#fr'), 'REALISASI KUNJUNGAN TIDAK 
     const v = Object.fromEntries(new FormData($('#fr')));
     const sesuai = v.ketReal === 'Sesuai Plan Pagi', pl = sesuai ? PLAN[v.pn] : {};
     return {
-      type: 'realisasi', pic: v.pic.trim(), crm: v.crm, kelompokPic: v.kelompokPic === '__lain' ? v.kpLain.trim() : v.kelompokPic, ketReal: v.ketReal,
+      type: 'realisasi', pic: v.pic.trim(), crm: v.crm, ketReal: v.ketReal,
       nasabah: sesuai ? pl.nama : v.nama.trim(), unit: pl.unit || '', kelompok: sesuai ? pl.kelompok : v.kel.trim(),
       os: pl.os ?? '', rencana: pl.tindakan || '', ketKunjungan: v.kv || '', ketTidak: v.kt || '',
       nominal: v.nominal, jenis: v.jenis, tl: v.jenis === 'Phase Out' ? '' : (v.tl || '').trim(),
@@ -269,7 +256,7 @@ $('#ci2').onclick = e => checkIn(e.target, $('#fr'), 'REALISASI KUNJUNGAN TIDAK 
   });
 
 /* mulai */
-fillKp(); card(); absen(); realSections(); route();
+card(); absen(); realSections(); route();
 </script>
 </body>
 </html>
