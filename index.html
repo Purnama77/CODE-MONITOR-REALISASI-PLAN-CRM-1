@@ -106,7 +106,7 @@ input:disabled,select:disabled{background:#EEF1EF}
 const API = 'https://script.google.com/macros/s/AKfycbz3jgrMEIazgH998ecNhrimsC9GLMSC4VCVC5jUy69Ji0T7cTA90lWyaOKviTsbdHadKA/exec';              // URL Web App dari Apps Script
 /* ======================== */
 
-const $ = s => document.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const sec = (el, on) => { el.hidden = !on; $$('input,select,textarea', el).forEach(i => i.disabled = !on); };
 const jam = () => +new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Jakarta' }).format(new Date());
 const dlg = (msg, type = 'ok') => { $('#mt').textContent = msg; $('#bx').className = 'box ' + type; $('#md').hidden = false; $('#mo').focus(); };
@@ -304,11 +304,11 @@ $('#cs').onclick = () => {
   cc.width = cv.videoWidth; cc.height = cv.videoHeight; cc.getContext('2d').drawImage(cv, 0, 0); camMode(false);
 };
 $('#cr').onclick = () => camMode(true);
-$('#cu').onclick = () => cc.toBlob(b => {
+$('#cu').onclick = () => { const w = camW; cc.toBlob(b => {
   if (!b) return dlg('Foto gagal diambil. Coba lagi.', 'err');
   const dt = new DataTransfer(); dt.items.add(new File([b], 'kunjungan.jpg', { type: 'image/jpeg' }));
-  $('.cam-in', camW).files = dt.files; syncCam(camW); closeCam();
-}, 'image/jpeg', .92);
+  $('.cam-in', w).files = dt.files; syncCam(w); closeCam();
+}, 'image/jpeg', .92); };
 $('#fr').addEventListener('reset', () => setTimeout(() => $$('#fr [data-cam]').forEach(syncCam), 0));
 $$('#fr [data-cam]').forEach(syncCam);
 
